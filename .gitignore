@@ -1,0 +1,13 @@
+# Secrets — only .env.example is committed
+.env
+
+# Go build artifacts
+*.exe
+*.test
+*.out
+/**/server
+
+# Local tooling
+.DS_Store
+.remember/
+docs/

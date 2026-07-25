@@ -1,0 +1,2 @@
+# Placeholder so this dir exists and can be bind-mounted into Traefik.
+# File-based dynamic config (middlewares, TLS) will live here in later steps.
