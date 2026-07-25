@@ -1,0 +1,35 @@
+# infra/gateway/traefik.yml — Traefik STATIC configuration.
+#
+# Loaded once when Traefik boots. Because we supply this file, we do NOT also
+# pass static settings as CLI flags in compose — Traefik reads static config
+# from a single source, and mixing the two is a classic source of confusion.
+
+# Entrypoints = the ports Traefik listens on INSIDE the container.
+# Host port mapping happens in compose (${TRAEFIK_HTTP_PORT} -> 80), so this
+# stays a fixed :80 here.
+entryPoints:
+  web:
+    address: ":80"
+
+# Dashboard + API. `insecure: true` serves the dashboard on the built-in :8080
+# entrypoint with no auth — fine for local dev, but we'll secure it before
+# anything is exposed publicly.
+api:
+  dashboard: true
+  insecure: true
+
+providers:
+  # Discover routers/services/middlewares from container labels.
+  docker:
+    exposedByDefault: false   # a container is only routed if it sets traefik.enable=true
+
+  # File-based dynamic config (shared middlewares, TLS options, etc.).
+  # Empty for now; hot-reloaded when we add files in a later step.
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+log:
+  level: INFO
+
+accessLog: {}
