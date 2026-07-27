@@ -1,3 +1,0 @@
-# Placeholder. Any *.sql or *.sh file dropped here runs ONCE, in filename order,
-# the first time the Postgres data volume is created. Our schema migrations will
-# land here (or run via a dedicated migration step) in a later part of the build.

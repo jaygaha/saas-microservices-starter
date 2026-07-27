@@ -31,4 +31,4 @@ def root(request: Request, full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="[IP_ADDRESS]", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8001")))

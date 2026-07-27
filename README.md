@@ -108,7 +108,7 @@ host — the only way in is through Traefik. Postgres and Redis *are* published
     │   ├── traefik.yml         # Traefik static config
     │   └── dynamic/            # Traefik dynamic config (later)
     └── database/
-        └── init/               # Postgres init scripts (later)
+        └── migrations/         # golang-migrate SQL migrations
 ```
 
 ## Configuration
@@ -128,7 +128,21 @@ make logs    # follow logs from all services
 make down    # stop & remove containers (keeps data volumes)
 make clean   # stop & remove containers AND volumes (wipes DB/cache)
 make help    # list all targets
+make migrate    # apply DB migrations (after the stack is healthy)
 ```
+
+## Database & migrations
+
+Schema is managed with **golang-migrate** (one-shot, on demand):
+
+```bash
+make migrate                                    # apply all pending migrations
+make migrate-down                               # roll back the last migration
+make migrate-create name=<desc_with_tbl_name>   # scaffold a new migration
+```
+
+Migrations live in `infra/database/migrations/`; see
+**[infra/database/README.md](infra/database/README.md)** for the schema diagram and conventions.
 
 ## Verify (Step 1)
 
@@ -139,3 +153,5 @@ curl http://localhost:8020/api/tasks/boards    # echoes "path":"/boards" → pre
 ```
 
 Dashboard: <http://localhost:8019/dashboard/> → **HTTP → Routers** should list `auth@docker` and `task@docker`.
+
+Take a ownership of the New StudyWorks platform initiative, not just implement it: start from a clear understanding of the requirements, validate the right tech stack against them, and drive the key architecture decisions from there. Create a POC project for a concrete, defensible recommendation on whether it's ready to move toward production, and make the work visible by sharing progress and decisions with the team and leadership as you go.

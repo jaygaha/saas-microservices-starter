@@ -41,7 +41,7 @@ services:
   postgres:
     image: postgres:18.4-alpine
     container_name: saas_database
-    profiles: ["core"]
+    profiles: ["core", "migrate"]
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -51,8 +51,6 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
-      # Any *.sql / *.sh here runs ONCE on first init (empty for now).
-      - ./database/init:/docker-entrypoint-initdb.d
     networks:
       - saas-net
     healthcheck:
@@ -155,6 +153,27 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+    networks:
+      - saas-net
+
+  # One-shot schema migrations (golang-migrate). Runs ONLY when invoked via `make migrate*`
+  # it's in its own profile, so `make up` never triggers it.
+  migrate:
+    image: migrate/migrate:v4.19.1
+    profiles: ["migrate"]
+    container_name: saas_db_migrate
+    volumes:
+      - ./database/migrations:/migrations:ro
+    # Fixed part of every command; the subcommand (up/down/…) is appended by make.
+    entrypoint:
+      - migrate
+      - -path
+      - /migrations
+      - -database
+      - postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - saas-net
 
