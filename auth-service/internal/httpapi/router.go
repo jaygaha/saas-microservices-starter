@@ -6,15 +6,18 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/auth"
 	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/store"
 )
 
 // NewRouter builds the HTTP handler for the service
-func NewRouter(st *store.Store, service string) http.Handler {
+func NewRouter(st *store.Store, svc *auth.Service, service string) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", handleLive(service))            // liveness
 	mux.HandleFunc("GET /health/ready", handleReady(st, service)) // readiness
+	mux.HandleFunc("POST /register", handleRegister(svc))         // ← /api/auth/register after strip
+	mux.HandleFunc("POST /login", handleLogin(svc))               // ← /api/auth/login after strip
 
 	return logRequests(mux)
 }
@@ -31,5 +34,11 @@ func logRequests(next http.Handler) http.Handler {
 		// log.Printf("method=%s %s", r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 		log.Printf("method=%s %s duration=%v", r.Method, r.URL.Path, time.Since(start))
+	})
+}
+
+func writeError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]any{
+		"error": message,
 	})
 }

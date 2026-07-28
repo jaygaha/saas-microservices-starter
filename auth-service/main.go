@@ -14,7 +14,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/auth"
 	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/config"
+	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/db"
 	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/httpapi"
 	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/store"
 )
@@ -33,11 +35,14 @@ func main() {
 
 	defer st.Close()
 
+	queries := db.New(st.DB)
+	authSvc := auth.NewService(queries, st.Redis, cfg.JWTSecret)
+
 	log.Printf("[%s] connected to postgres and redis", cfg.ServiceName)
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%s", cfg.Port),
-		Handler:           httpapi.NewRouter(st, cfg.ServiceName),
+		Handler:           httpapi.NewRouter(st, authSvc, cfg.ServiceName),
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      10 * time.Second,
