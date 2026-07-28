@@ -1,18 +1,17 @@
-# ---- Build stage ------------------------------------------------------------
+# Build stage
 # Pinned to the Go version this project targets. Alpine keeps the toolchain small.
 FROM golang:1.26-alpine AS build
 WORKDIR /src
 
 # Copy the module file first so `go mod download` is cached independently of
-# source changes. (No go.sum yet — we have zero external deps in Step 1.)
-COPY go.mod ./
+COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy the rest of the source and build a static, stripped binary.
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/server .
 
-# ---- Runtime stage ----------------------------------------------------------
+# Runtime stage
 # Alpine (not distroless) so we get a shell + busybox wget for the healthcheck
 # and easy debugging. We can harden to distroless later.
 FROM alpine:3.21

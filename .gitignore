@@ -1,4 +1,4 @@
-# Secrets — only .env.example is committed
+# Secrets only .env.example is committed
 .env
 
 # Go build artifacts

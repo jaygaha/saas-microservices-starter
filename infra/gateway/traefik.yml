@@ -1,7 +1,7 @@
-# infra/gateway/traefik.yml — Traefik STATIC configuration.
+# infra/gateway/traefik.yml Traefik STATIC configuration.
 #
 # Loaded once when Traefik boots. Because we supply this file, we do NOT also
-# pass static settings as CLI flags in compose — Traefik reads static config
+# pass static settings as CLI flags in compose Traefik reads static config
 # from a single source, and mixing the two is a classic source of confusion.
 
 # Entrypoints = the ports Traefik listens on INSIDE the container.
@@ -12,7 +12,7 @@ entryPoints:
     address: ":80"
 
 # Dashboard + API. `insecure: true` serves the dashboard on the built-in :8080
-# entrypoint with no auth — fine for local dev, but we'll secure it before
+# entrypoint with no auth fine for local dev, but we'll secure it before
 # anything is exposed publicly.
 api:
   dashboard: true

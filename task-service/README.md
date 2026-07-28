@@ -3,7 +3,7 @@
 The "work" domain for the Task Manager SaaS: boards and tasks.
 
 - **Language:** Python (FastAPI)
-- **Gateway route:** `/api/tasks/*` — Traefik strips the prefix before forwarding
+- **Gateway route:** `/api/tasks/*` Traefik strips the prefix before forwarding
 - **Internal port:** `8001` (not published to the host; reachable only via Traefik)
 
 ## Endpoints

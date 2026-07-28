@@ -1,4 +1,4 @@
-# task-service — owns the "work" domain (boards, tasks).
+# task-service owns the "work" domain (boards, tasks).
 # Step 1 is intentionally tiny: a health check + a root echo, so we can verify
 # Traefik routes to a SECOND, non-Go service. Domain logic comes in later steps.
 import os

@@ -1,103 +1,68 @@
-// Command auth-service is the identity & access service.
-//
-// Step 1 is intentionally tiny: a health endpoint and a root handler, using
-// only the standard library. Its whole job right now is to prove that a request
-// can travel client -> Traefik -> this container and back. We'll grow it into
-// real auth (users, JWT, teams, RBAC) in later steps.
+// Command auth-service is the identity & access service for the Task Manager SaaS:
+// users, authentication (JWT), teams, and RBAC, backed by PostgreSQL and Redis
+// and served behind Traefik at /api/auth/*.
 package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/config"
+	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/httpapi"
+	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/store"
 )
 
 func main() {
-	service := getenv("SERVICE_NAME", "auth-service")
-	port := getenv("PORT", "8000")
-
-	mux := http.NewServeMux()
-	// Go 1.22+ pattern syntax: method + path in the pattern string.
-	mux.HandleFunc("GET /health", handleHealth(service))
-	mux.HandleFunc("/", handleRoot(service))
-
-	srv := &http.Server{
-		Addr:         ":" + port,
-		Handler:      logRequests(mux),
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("cannot load config: %v", err)
 	}
 
-	// Serve in a goroutine so main can block on OS signals for a clean shutdown.
+	ctx := context.Background()
+	st, err := store.New(ctx, cfg.DatabaseURL, cfg.RedisURL)
+	if err != nil {
+		log.Fatalf("cannot init store: %v", err)
+	}
+
+	defer st.Close()
+
+	log.Printf("[%s] connected to postgres and redis", cfg.ServiceName)
+
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%s", cfg.Port),
+		Handler:           httpapi.NewRouter(st, cfg.ServiceName),
+		ReadTimeout:       10 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       10 * time.Second,
+	}
+
 	go func() {
-		log.Printf("[%s] listening on :%s", service, port)
+		log.Printf("[%s] HTTP listening on %s", cfg.ServiceName, srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("[%s] server error: %v", service, err)
+			log.Fatalf("[%s] server failed: %v", cfg.ServiceName, err)
 		}
 	}()
 
-	// Wait for Ctrl-C / `docker compose down` (SIGINT / SIGTERM).
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
 	<-stop
 
-	log.Printf("[%s] shutting down…", service)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	log.Printf("[%s] shutting down gracefully...", cfg.ServiceName)
+
+	shutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("[%s] graceful shutdown failed: %v", service, err)
+	if err := srv.Shutdown(shutCtx); err != nil {
+		log.Printf("[%s] forced shutdown: %v", cfg.ServiceName, err)
 	}
-	log.Printf("[%s] stopped", service)
-}
 
-// handleHealth is what Docker's healthcheck (and, later, Traefik/monitoring)
-// hits to confirm the process is alive.
-func handleHealth(service string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"status":  "ok",
-			"service": service,
-			"time":    time.Now().UTC().Format(time.RFC3339),
-		})
-	}
-}
-
-// handleRoot echoes the path so you can *see* prefix-stripping working:
-// GET /api/auth/anything at the gateway arrives here as /anything.
-func handleRoot(service string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"service": service,
-			"message": "up — this request reached the service through Traefik",
-			"path":    r.URL.Path,
-		})
-	}
-}
-
-func writeJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
-}
-
-// logRequests is a minimal access-log middleware.
-func logRequests(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		log.Printf("%s %s (%s)", r.Method, r.URL.Path, time.Since(start))
-	})
-}
-
-func getenv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
+	log.Printf("[%s] server exited", cfg.ServiceName)
 }
