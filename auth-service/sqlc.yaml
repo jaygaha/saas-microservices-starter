@@ -1,0 +1,16 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "../infra/database/migrations"  # generate from the SAME migrations Postgres runs
+    queries: "queries"
+    gen:
+      go:
+        package: "db"
+        out: "internal/db"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        overrides:
+          - db_type: "citext"  # sqlc doesn't know citext -> map to string
+            go_type: "string"
+          - db_type: "uuid" # your choice: google/uuid instead of pgtype.UUID
+            go_type: "github.com/google/uuid.UUID"

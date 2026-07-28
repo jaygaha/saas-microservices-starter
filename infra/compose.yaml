@@ -112,7 +112,7 @@ services:
       - "traefik.http.middlewares.auth-stripprefix.stripprefix.prefixes=/api/auth"
       - "traefik.http.services.auth.loadbalancer.server.port=${AUTH_SERVICE_PORT}"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:${AUTH_SERVICE_PORT}/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:${AUTH_SERVICE_PORT}/health/ready"]
       interval: 10s
       timeout: 3s
       retries: 5

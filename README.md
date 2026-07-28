@@ -22,8 +22,7 @@ graph TD
         FrontendService["frontend-service<br/><i>web UI · stack TBD</i><br/>:3000 · served at /"]
         AuthService["auth-service · Go<br/><i>users, JWT, teams, RBAC</i><br/>:8000"]
         TaskService["task-service · Python/FastAPI<br/><i>boards, tasks</i><br/>:8001"]
-        NewService["➕ &lt;new-service&gt;<br/><i>any language</i><br/>:80xx · route
-/api/&lt;x&gt;/*"]
+        NewService["➕ &lt;new-service&gt;<br/><i>any language</i><br/>:80xx · route /api/&lt;x&gt;/*"]
     end
 
     subgraph Storage ["Data Layer"]
@@ -52,31 +51,10 @@ graph TD
     classDef tbd stroke-dasharray: 4 3,stroke:#aa8855,color:#aa8855;
     class NewService future;
     class FrontendService tbd;
-
-    Traefik -->|"/ catch-all (lowest priority)"| FrontendService
-    Traefik -->|"prefix stripped"| AuthService
-    Traefik -->|"prefix stripped"| TaskService
-    Traefik -.->|"just add labels"| NewService
-
-    AuthService --> Postgres
-    AuthService --> Redis
-    TaskService --> Postgres
-    TaskService --> Redis
-    NewService -.-> Postgres
-    NewService -.-> Redis
-
-    classDef future stroke-dasharray: 5 5,stroke:#8888aa,color:#8888aa;
-    classDef tbd stroke-dasharray: 4 3,stroke:#aa8855,color:#aa8855;
-    class NewService future;
-    class FrontendService tbd;
 ```
 
-Everything shares the `saas-net` Docker network. Traefik discovers each service
-from its container **labels** (no hand-written routes) and strips the `/api/<x>`
-prefix before forwarding, so each service serves clean paths (`/health`, not
-`/api/auth/health`). The service ports (3000/3001) are **not** published to the
-host — the only way in is through Traefik. Postgres and Redis *are* published
-(5432/6379) for local-dev convenience.
+Everything shares the `saas-net` Docker network. Traefik discovers each service from its container **labels** (no hand-written routes) and strips the `/api/<x>` prefix before forwarding, so each service serves clean paths (`/health`, not
+`/api/auth/health`). The service ports (3000/3001) are **not** published to the host the only way in is through Traefik. Postgres and Redis *are* published (5432/6379) for local-dev convenience.
 
 ## Services
 
@@ -95,7 +73,19 @@ host — the only way in is through Traefik. Postgres and Redis *are* published
 ├── auth-service/               # Go: identity & access
 │   ├── main.go
 │   ├── go.mod
-│   └── Dockerfile
+│   ├── Dockerfile
+│   ├── sqlc.yaml               # sqlc config
+│   ├── queries/users.sql       # hand-written SQL (CreateUser, GetUserByEmail, GetUserByID)
+│   └── internal/
+│     ├── db/                   # sqlc-GENERATED: never hand-edit
+│     ├── auth/
+│     │   ├── password.go       # bcrypt hash/verify (TODO)
+│     │   ├── token.go          # JWT access token (HS256)  (TODO)
+│     │   ├── session.go        # refresh token → Redis  (TODO)
+│     │   └── service.go        # Register/Login orchestration  (TODO)
+│     └── httpapi/
+│         ├── auth.go             # handlers + request/response DTOs (TODO)
+│         └── router.go           # + POST /register,/login  (TODO)
 ├── frontend-service/           # frontend service
 │   └── Dockerfile
 ├── task-service/               # Python/FastAPI: boards & tasks
@@ -119,39 +109,14 @@ All ports, DB credentials, and the JWT secret live in `.env` (copy from `.env.ex
 docker compose -f infra/compose.yaml --env-file .env config
 ```
 
-## Run
+## Quick start
 
 ```bash
-make up      # build images + start the whole stack (detached)
-make ps      # status — wait until all 5 containers are (healthy)
-make logs    # follow logs from all services
-make down    # stop & remove containers (keeps data volumes)
-make clean   # stop & remove containers AND volumes (wipes DB/cache)
-make help    # list all targets
-make migrate    # apply DB migrations (after the stack is healthy)
+make up # build + start the stack
+make migrate # apply DB migrations
+make smoke # verify the gateway + services are healthy
 ```
 
-## Database & migrations
+## Development
 
-Schema is managed with **golang-migrate** (one-shot, on demand):
-
-```bash
-make migrate                                    # apply all pending migrations
-make migrate-down                               # roll back the last migration
-make migrate-create name=<desc_with_tbl_name>   # scaffold a new migration
-```
-
-Migrations live in `infra/database/migrations/`; see
-**[infra/database/README.md](infra/database/README.md)** for the schema diagram and conventions.
-
-## Verify (Step 1)
-
-```bash
-curl http://localhost:8020/api/auth/health     # {"service":"auth-service","status":"ok",...}
-curl http://localhost:8020/api/tasks/health    # {"service":"task-service","status":"ok",...}
-curl http://localhost:8020/api/tasks/boards    # echoes "path":"/boards" → prefix-stripping works
-```
-
-Dashboard: <http://localhost:8019/dashboard/> → **HTTP → Routers** should list `auth@docker` and `task@docker`.
-
-Take a ownership of the New StudyWorks platform initiative, not just implement it: start from a clear understanding of the requirements, validate the right tech stack against them, and drive the key architecture decisions from there. Create a POC project for a concrete, defensible recommendation on whether it's ready to move toward production, and make the work visible by sharing progress and decisions with the team and leadership as you go.
+See **[IMPLEMENTATION.md](IMPLEMENTATION.md)** for dev workflows: Make targets, running migrations, and regenerating the sqlc DB layer (`make sqlc`).
