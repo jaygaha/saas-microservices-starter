@@ -33,6 +33,20 @@ func NewRefreshToken(ctx context.Context, rdb *redis.Client, userID uuid.UUID) (
 	return token, nil
 }
 
+// lookupRefresh returns the user id a refresh token maps to (redis.Nil if absent).
+func lookupRefresh(ctx context.Context, rdb *redis.Client, token string) (uuid.UUID, error) {
+	val, err := rdb.Get(ctx, refreshKey(token)).Result()
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return uuid.Parse(val)
+}
+
+// RevokeRefreshToken deletes a refresh token (logout / rotation). No-op if absent.
+func RevokeRefreshToken(ctx context.Context, rdb *redis.Client, token string) error {
+	return rdb.Del(ctx, refreshKey(token)).Err()
+}
+
 // refreshKey hashes the token so a Redis dump never exposes usable tokens.
 func refreshKey(token string) string {
 	sum := sha256.Sum256([]byte(token))

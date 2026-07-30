@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -20,6 +21,9 @@ var ErrEmailTaken = errors.New("email already registered")
 // ErrInvalidCredentials is returned for both wrong password AND unknown email,
 // so we never reveal which emails are registered.
 var ErrInvalidCredentials = errors.New("invalid email or password")
+
+// ErrInvalidToken is returned for a missing/expired/rotated refresh token
+var ErrInvalidToken = errors.New("invalid or expired token")
 
 type Service struct {
 	q         *db.Queries // only used for read-only team lookup;
@@ -99,6 +103,43 @@ func (s *Service) issueTokens(ctx context.Context, user db.User) (*AuthResult, e
 		AccessToken:  access,
 		RefreshToken: refresh,
 	}, nil
+}
+
+// Refresh rotates a refresh token: verify -> delete old -> issue new access+refresh.
+func (s *Service) Refresh(ctx context.Context, refreshToken string) (*AuthResult, error) {
+	userID, err := lookupRefresh(ctx, s.rdb, refreshToken)
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, ErrInvalidToken
+		}
+		return nil, fmt.Errorf("lookup refresh: %w", err)
+	}
+
+	// Rotate: the presented token is single-use
+	if err := RevokeRefreshToken(ctx, s.rdb, refreshToken); err != nil {
+		return nil, fmt.Errorf("revoke old refresh: %w", err)
+	}
+
+	// Re-load the user (also confirms they still exist/ aren't soft deleted).
+	user, err := s.q.GetUserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrInvalidToken
+		}
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+
+	return s.issueTokens(ctx, user)
+}
+
+// Logout revokes a refresh token (idempotent)
+func (s *Service) Logout(ctx context.Context, refreshToken string) error {
+	return RevokeRefreshToken(ctx, s.rdb, refreshToken)
+}
+
+// UserByID loads a current user by ID
+func (s *Service) UserByID(ctx context.Context, userID uuid.UUID) (db.User, error) {
+	return s.q.GetUserByID(ctx, userID)
 }
 
 // It checks if the error is a unique constraint violation.

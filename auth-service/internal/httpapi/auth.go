@@ -21,6 +21,10 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+type refreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
 type userDTO struct {
 	ID       string `json:"id"`
 	Email    string `json:"email"`
@@ -98,6 +102,67 @@ func handleLogin(svc *auth.Service) http.HandlerFunc {
 		}
 
 		writeJSON(w, http.StatusOK, toAuthResponse(res)) // 200, not 201
+	}
+}
+
+func handleMe(svc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := userIDFromContext(r.Context())
+		if !ok {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		user, err := svc.UserByID(r.Context(), userID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "could not fetch user")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, userDTO{
+			ID:       user.ID.String(),
+			Email:    user.Email,
+			FullName: user.FullName.String,
+		})
+	}
+}
+
+func handleRefresh(svc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req refreshRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.RefreshToken == "" {
+			writeError(w, http.StatusBadRequest, "invalid refresh token")
+			return
+		}
+
+		res, err := svc.Refresh(r.Context(), req.RefreshToken)
+		if err != nil {
+			if errors.Is(err, auth.ErrInvalidToken) {
+				writeError(w, http.StatusUnauthorized, "invalid or expired token")
+				return
+			}
+
+			writeError(w, http.StatusInternalServerError, "could not refresh")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, toAuthResponse(res))
+	}
+}
+
+func handleLogout(svc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req refreshRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.RefreshToken == "" {
+			writeError(w, http.StatusBadRequest, "invalid refresh token")
+			return
+		}
+
+		if err := svc.Logout(r.Context(), req.RefreshToken); err != nil {
+			writeError(w, http.StatusInternalServerError, "could not log out")
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent) // 204 No Body is idiomatic for successful logout
 	}
 }
 

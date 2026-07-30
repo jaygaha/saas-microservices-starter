@@ -36,11 +36,17 @@ cd auth-service && go mod tidy && go build ./...
 
 Versioned SQL in `infra/database/migrations/`, applied on demand via `make migrate`. Schema diagram and conventions live in  [`infra/database/README.md`](infra/database/README.md).
 
+## Testing
+
+- `make smoke`: gateway + service health.
+- `./scripts/auth-smoke.sh`: full auth flow (register → login → /me → refresh → logout). Override with `BASE=`, `EMAIL=`, `PASS=`.
+
 ## Build log
 
-- **Step 1**: Traefik gateway + Go/Python service skeletons
-(Docker Compose).
-- **Step 2**: Postgres schema: `users`, `teams`, `team_members`
-via golang-migrate.
-- **Step 3**: auth-service: config + Postgres/Redis wiring,
-sqlc, register/login (JWT + Redis refresh). *(in progress)*
+- **Step 1**: Traefik gateway + Go/Python service skeletons (Docker Compose).
+- **Step 2**: Postgres schema `users`, `teams`, `team_members` via golang-migrate.
+- **Step 3: auth-service:**
+    - 3a: config + Postgres/Redis wiring + liveness/readiness health.
+    - 3b: register + login bcrypt, access JWT (HS256) + Redis-backed refresh token.
+    - 3c: `/me` (JWT middleware), refresh-token rotation, logout.
+    - 3d *(next)*: `POST /api/teams` create team + owner membership.

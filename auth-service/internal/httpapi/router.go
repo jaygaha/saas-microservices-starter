@@ -11,13 +11,17 @@ import (
 )
 
 // NewRouter builds the HTTP handler for the service
-func NewRouter(st *store.Store, svc *auth.Service, service string) http.Handler {
+func NewRouter(st *store.Store, svc *auth.Service, secret, service string) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", handleLive(service))            // liveness
 	mux.HandleFunc("GET /health/ready", handleReady(st, service)) // readiness
-	mux.HandleFunc("POST /register", handleRegister(svc))         // ← /api/auth/register after strip
-	mux.HandleFunc("POST /login", handleLogin(svc))               // ← /api/auth/login after strip
+	mux.HandleFunc("POST /register", handleRegister(svc))         // ← /api/register after strip
+	mux.HandleFunc("POST /login", handleLogin(svc))               // ← /api/login after strip
+	mux.HandleFunc("POST /refresh", handleRefresh(svc))           // ← /api/refresh after strip
+	mux.HandleFunc("POST /logout", handleLogout(svc))             // ← /api/logout after strip
+
+	mux.HandleFunc("GET /me", requiredAuth(secret, handleMe(svc))) // ← /api/me protected by middleware
 
 	return logRequests(mux)
 }
