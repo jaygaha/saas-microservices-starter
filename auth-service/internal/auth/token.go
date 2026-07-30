@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -30,4 +31,21 @@ func NewAccessToken(secret string, userID uuid.UUID, email string) (string, erro
 	}
 
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
+}
+
+// ParseAccessToken verifies the signature + expiry and returns the claims.
+func ParseAccessToken(secret, tokenString string) (*AccessClaims, error) {
+	claims := &AccessClaims{}
+	// ParseWithClaims validates exp automatically in v5, so expired tokens error out.
+	_, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (any, error) {
+		// Reject anything that isn't HMAC, guards against alg-swap attacks.
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+		return []byte(secret), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return claims, nil
 }

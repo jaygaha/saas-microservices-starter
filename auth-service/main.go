@@ -42,7 +42,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%s", cfg.Port),
-		Handler:           httpapi.NewRouter(st, authSvc, cfg.ServiceName),
+		Handler:           httpapi.NewRouter(st, authSvc, cfg.JWTSecret, cfg.ServiceName),
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 		WriteTimeout:      10 * time.Second,
