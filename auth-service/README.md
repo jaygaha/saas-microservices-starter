@@ -17,10 +17,11 @@ Paths are what the service sees *after* Traefik strips `/api/auth` (e.g. `POST /
 | POST   | `/register`     | –             | Create a user; returns tokens (**201**) |
 | POST   | `/login`        | –             | Verify credentials; returns tokens (**200**) |
 | GET    | `/me`           | Bearer        | The current user |
+| POST   | `/teams`        | Bearer        | Create a team + owner membership (**201**) |
 | POST   | `/refresh`      | refresh token | Rotate: revoke the sent refresh token, return new ones |
 | POST   | `/logout`       | refresh token | Revoke a refresh token (**204**) |
 
-`/me` needs `Authorization: Bearer <access_token>`. `/refresh` and `/logout` take `{"refresh_token": "..."}` in the body (no Bearer header).
+`/me` and `/teams` need `Authorization: Bearer <access_token>`. `/refresh` and `/logout` take `{"refresh_token": "..."}` in the body. `/teams` takes `{"name": "..."}` and returns `{"id","name","slug"}`.
 
 ## Tokens
 

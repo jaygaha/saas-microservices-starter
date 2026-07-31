@@ -5,11 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/db"
@@ -17,6 +19,10 @@ import (
 
 // ErrEmailTaken is returned when the email already exists (unique violation).
 var ErrEmailTaken = errors.New("email already registered")
+var (
+	ErrInvalidTeamName = errors.New("team name must contain letters or numbers")
+	ErrSlugTaken       = errors.New("team slug already exists")
+)
 
 // ErrInvalidCredentials is returned for both wrong password AND unknown email,
 // so we never reveal which emails are registered.
@@ -27,14 +33,16 @@ var ErrInvalidToken = errors.New("invalid or expired token")
 
 type Service struct {
 	q         *db.Queries // only used for read-only team lookup;
+	pool      *pgxpool.Pool
 	rdb       *redis.Client
 	jwtSecret string // copied from env:JWT_SECRET
 }
 
 // NewService builds a service struct that holds references
-func NewService(q *db.Queries, rdb *redis.Client, jwtSecret string) *Service {
+func NewService(pool *pgxpool.Pool, rdb *redis.Client, jwtSecret string) *Service {
 	return &Service{
-		q:         q,
+		q:         db.New(pool),
+		pool:      pool,
 		rdb:       rdb,
 		jwtSecret: jwtSecret,
 	}
@@ -142,8 +150,64 @@ func (s *Service) UserByID(ctx context.Context, userID uuid.UUID) (db.User, erro
 	return s.q.GetUserByID(ctx, userID)
 }
 
+// CreateTeam creates a team and the creator's owner membership in ONE transaction.
+func (s *Service) CreateTeam(ctx context.Context, ownerID uuid.UUID, name string) (db.Team, error) {
+	slug := slugify(name)
+	if slug == "" {
+		return db.Team{}, ErrInvalidTeamName
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return db.Team{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) // no-op once committed
+
+	qtx := s.q.WithTx(tx)
+
+	team, err := qtx.CreateTeam(ctx, db.CreateTeamParams{Name: name, Slug: slug, CreatedBy: ownerID})
+	if err != nil {
+		if isUniqueViolation(err) {
+			return db.Team{}, ErrSlugTaken
+		}
+		return db.Team{}, fmt.Errorf("create team: %w", err)
+	}
+
+	if _, err := qtx.AddTeamMember(ctx, db.AddTeamMemberParams{
+		TeamID: team.ID, UserID: ownerID, Role: db.TeamRoleOwner,
+	}); err != nil {
+		return db.Team{}, fmt.Errorf("add owner member: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return db.Team{}, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return team, nil
+}
+
 // It checks if the error is a unique constraint violation.
 func isUniqueViolation(err error) bool {
 	var pgerr *pgconn.PgError
 	return errors.As(err, &pgerr) && pgerr.Code == "23505"
+}
+
+// slugify lowercases and turns any run of non-alphanumerics into a single hyphen.
+func slugify(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+
+	var b strings.Builder
+	hyphen := false
+
+	for _, r := range s {
+		if r >= 'a' && r <= 'z' || r >= '0' && r <= '9' {
+			b.WriteRune(r)
+			hyphen = false
+		} else if !hyphen && b.Len() > 0 {
+			b.WriteByte('-')
+			hyphen = true
+		}
+	}
+
+	return strings.Trim(b.String(), "-")
 }
