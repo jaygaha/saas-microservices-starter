@@ -40,6 +40,7 @@ Versioned SQL in `infra/database/migrations/`, applied on demand via `make migra
 
 - `make smoke`: gateway + service health.
 - `./scripts/auth-smoke.sh`: full auth flow (register → login → /me → create team → refresh → logout). Override with `BASE=`, `EMAIL=`, `PASS=`, `TEAM=`.
+- `./scripts/rbac-smoke.sh`: team RBAC (list members as owner / outsider / anon → 200 / 403 / 401). Override with `SLUG=`, `OWNER=`, `OUT=`.
 
 ## Build log
 
@@ -50,4 +51,6 @@ Versioned SQL in `infra/database/migrations/`, applied on demand via `make migra
     - 3b: register + login bcrypt, access JWT (HS256) + Redis-backed refresh token.
     - 3c: `/me` (JWT middleware), refresh-token rotation, logout.
     - 3d: `POST /api/auth/teams` create team + owner membership in one transaction.
-- **Step 4** *(next)*: `task-service` boards & tasks with RBAC enforcement.
+- **Step 4 — RBAC / team management (auth-service):**
+    - 4a: `internal/rbac` permission catalog + `requirePermission` middleware; list members.
+- **Step 5** *(later)*: `task-service` — boards & tasks with RBAC enforcement.

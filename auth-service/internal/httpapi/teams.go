@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/auth"
 )
 
@@ -17,6 +18,13 @@ type teamDTO struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 	Slug string `json:"slug"`
+}
+
+type memberDTO struct {
+	UserID   string `json:"user_id"`
+	Email    string `json:"email"`
+	FullName string `json:"full_name"`
+	Role     string `json:"role"`
 }
 
 func handleCreateTeam(svc *auth.Service) http.HandlerFunc {
@@ -51,5 +59,32 @@ func handleCreateTeam(svc *auth.Service) http.HandlerFunc {
 		}
 
 		writeJSON(w, http.StatusCreated, teamDTO{ID: team.ID.String(), Name: team.Name, Slug: team.Slug})
+	}
+}
+
+func handleListMembers(svc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		teamID, err := uuid.Parse(r.PathValue("teamID"))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid team id")
+			return
+		}
+
+		rows, err := svc.ListMembers(r.Context(), teamID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "could not list team members")
+			return
+		}
+
+		out := make([]memberDTO, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, memberDTO{
+				UserID:   row.UserID.String(),
+				Email:    row.Email,
+				FullName: row.FullName.String,
+				Role:     string(row.Role),
+			})
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"members": out})
 	}
 }

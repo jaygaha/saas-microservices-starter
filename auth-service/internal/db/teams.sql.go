@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addTeamMember = `-- name: AddTeamMember :one
@@ -61,4 +62,69 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, e
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getTeamMember = `-- name: GetTeamMember :one
+SELECT team_id, user_id, role, created_at, updated_at FROM team_members
+WHERE team_id = $1 AND user_id = $2
+`
+
+type GetTeamMemberParams struct {
+	TeamID uuid.UUID `json:"team_id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (TeamMember, error) {
+	row := q.db.QueryRow(ctx, getTeamMember, arg.TeamID, arg.UserID)
+	var i TeamMember
+	err := row.Scan(
+		&i.TeamID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listTeamMembers = `-- name: ListTeamMembers :many
+SELECT tm.user_id, u.email, u.full_name, tm.role, tm.created_at 
+FROM team_members tm
+INNER JOIN users u ON tm.user_id = u.id
+WHERE tm.team_id = $1 AND u.deleted_at IS NULL
+ORDER BY tm.created_at
+`
+
+type ListTeamMembersRow struct {
+	UserID    uuid.UUID          `json:"user_id"`
+	Email     string             `json:"email"`
+	FullName  pgtype.Text        `json:"full_name"`
+	Role      TeamRole           `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]ListTeamMembersRow, error) {
+	rows, err := q.db.Query(ctx, listTeamMembers, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTeamMembersRow
+	for rows.Next() {
+		var i ListTeamMembersRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Email,
+			&i.FullName,
+			&i.Role,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

@@ -17,6 +17,8 @@ import (
 	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/db"
 )
 
+// Errors
+
 // ErrEmailTaken is returned when the email already exists (unique violation).
 var ErrEmailTaken = errors.New("email already registered")
 var (
@@ -30,6 +32,11 @@ var ErrInvalidCredentials = errors.New("invalid email or password")
 
 // ErrInvalidToken is returned for a missing/expired/rotated refresh token
 var ErrInvalidToken = errors.New("invalid or expired token")
+
+// ErrNotMember is returned when the user is not a member of the team
+var ErrNotMember = errors.New("user is not a member of the team")
+
+// Service struct
 
 type Service struct {
 	q         *db.Queries // only used for read-only team lookup;
@@ -185,6 +192,25 @@ func (s *Service) CreateTeam(ctx context.Context, ownerID uuid.UUID, name string
 
 	return team, nil
 }
+
+// MemberRole returns the caller's role in a team, or ErrrNotMember
+func (s *Service) MemberRole(ctx context.Context, teamID, userID uuid.UUID) (db.TeamRole, error) {
+	m, err := s.q.GetTeamMember(ctx, db.GetTeamMemberParams{TeamID: teamID, UserID: userID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrNotMember
+		}
+		return "", fmt.Errorf("get team member: %w", err)
+	}
+
+	return m.Role, nil
+}
+
+func (s *Service) ListMembers(ctx context.Context, teamID uuid.UUID) ([]db.ListTeamMembersRow, error) {
+	return s.q.ListTeamMembers(ctx, teamID)
+}
+
+// Helper functions
 
 // It checks if the error is a unique constraint violation.
 func isUniqueViolation(err error) bool {
