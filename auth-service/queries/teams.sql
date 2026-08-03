@@ -7,3 +7,14 @@ RETURNING *;
 INSERT INTO team_members (team_id, user_id, role)
 VALUES ($1, $2, $3)
 RETURNING *;
+
+-- name: GetTeamMember :one
+SELECT * FROM team_members
+WHERE team_id = $1 AND user_id = $2;
+
+-- name: ListTeamMembers :many
+SELECT tm.user_id, u.email, u.full_name, tm.role, tm.created_at 
+FROM team_members tm
+INNER JOIN users u ON tm.user_id = u.id
+WHERE tm.team_id = $1 AND u.deleted_at IS NULL
+ORDER BY tm.created_at;

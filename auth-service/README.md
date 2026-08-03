@@ -18,10 +18,20 @@ Paths are what the service sees *after* Traefik strips `/api/auth` (e.g. `POST /
 | POST   | `/login`        | –             | Verify credentials; returns tokens (**200**) |
 | GET    | `/me`           | Bearer        | The current user |
 | POST   | `/teams`        | Bearer        | Create a team + owner membership (**201**) |
+| GET    | `/teams/{teamID}/members` | Bearer        | List a team's members (`member.view`) |
 | POST   | `/refresh`      | refresh token | Rotate: revoke the sent refresh token, return new ones |
 | POST   | `/logout`       | refresh token | Revoke a refresh token (**204**) |
 
-`/me` and `/teams` need `Authorization: Bearer <access_token>`. `/refresh` and `/logout` take `{"refresh_token": "..."}` in the body. `/teams` takes `{"name": "..."}` and returns `{"id","name","slug"}`.
+`/me` and `/teams*` need `Authorization: Bearer <access_token>`. `/refresh` and `/logout` take `{"refresh_token": "..."}`. `/teams` takes `{"name": "..."}`; `POST /teams/{teamID}/members` takes `{"email": "...", "role": "admin|member|viewer"}`.
+
+## Permissions (RBAC)
+
+Team endpoints are authorized by the caller's **role in that team** — resolved per request from `team_members` (non-members get **403**). Roles: `owner`, `admin`, `member`, `viewer`.
+
+| Permission | owner | admin | member | viewer |
+|---|:--:|:--:|:--:|:--:|
+| `member.view` (list) | ✓ | ✓ | ✓ | ✓ |
+| `member.invite` (add) | ✓ | ✓ | ✗ | ✗ |
 
 ## Tokens
 

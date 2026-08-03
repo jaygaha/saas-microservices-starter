@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/auth"
+	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/rbac"
 	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/store"
 )
 
@@ -24,6 +25,7 @@ func NewRouter(st *store.Store, svc *auth.Service, secret, service string) http.
 	mux.HandleFunc("GET /me", requiredAuth(secret, handleMe(svc))) // ← /api/me protected by middleware
 
 	mux.HandleFunc("POST /teams", requiredAuth(secret, handleCreateTeam(svc))) // ← /api/teams protected by middleware
+	mux.HandleFunc("GET /teams/{teamID}/members", requiredAuth(secret, requirePermission(svc, rbac.MemberView, handleListMembers(svc))))
 
 	return logRequests(mux)
 }
