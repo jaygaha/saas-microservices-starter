@@ -8,10 +8,16 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/auth"
+	"github.com/jaygaha/saas-microservices-starter/auth-service/internal/db"
 )
 
 type createTeamRequest struct {
 	Name string `json:"name"`
+}
+
+type addMemberRequest struct {
+	Email string `json:"email"`
+	Role  string `json:"role"`
 }
 
 type teamDTO struct {
@@ -86,5 +92,53 @@ func handleListMembers(svc *auth.Service) http.HandlerFunc {
 			})
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"members": out})
+	}
+}
+
+func handleAddMember(svc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		teamID, err := uuid.Parse(r.PathValue("teamID"))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid team id")
+			return
+		}
+
+		var req addMemberRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid JSON body")
+			return
+		}
+
+		req.Email = strings.TrimSpace(req.Email)
+		if !strings.Contains(req.Email, "@") {
+			writeError(w, http.StatusBadRequest, "a valid email is required")
+			return
+		}
+
+		role := db.TeamRole(req.Role)
+		if role != db.TeamRoleAdmin && role != db.TeamRoleMember && role != db.TeamRoleViewer {
+			writeError(w, http.StatusBadRequest, "invalid role; role must be admin, member, or viewer")
+			return
+		}
+
+		user, err := svc.AddMember(r.Context(), teamID, req.Email, role)
+		if err != nil {
+			switch {
+			case errors.Is(err, auth.ErrUserNotFound):
+				writeError(w, http.StatusNotFound, "no user with that email")
+			case errors.Is(err, auth.ErrAlreadyMember):
+				writeError(w, http.StatusConflict, "user is already a member")
+			default:
+				writeError(w, http.StatusInternalServerError, "could not add member")
+			}
+			return
+		}
+
+		writeJSON(w, http.StatusCreated, memberDTO{
+			UserID:   user.ID.String(),
+			Email:    user.Email,
+			FullName: user.FullName.String,
+			Role:     string(role),
+		})
 	}
 }
