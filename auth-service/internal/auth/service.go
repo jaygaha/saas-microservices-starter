@@ -19,22 +19,31 @@ import (
 
 // Errors
 
-// ErrEmailTaken is returned when the email already exists (unique violation).
-var ErrEmailTaken = errors.New("email already registered")
 var (
+	// ErrEmailTaken is returned when the email already exists (unique violation).
+	ErrEmailTaken = errors.New("email already registered")
+
+	// ErrInvalidTeamName is returned when the team name is invalid.
 	ErrInvalidTeamName = errors.New("team name must contain letters or numbers")
-	ErrSlugTaken       = errors.New("team slug already exists")
+	// ErrSlugTaken is returned when the team slug already exists.
+	ErrSlugTaken = errors.New("team slug already exists")
+
+	// ErrInvalidCredentials is returned for both wrong password AND unknown email,
+	// so we never reveal which emails are registered.
+	ErrInvalidCredentials = errors.New("invalid email or password")
+
+	// ErrInvalidToken is returned for a missing/expired/rotated refresh token
+	ErrInvalidToken = errors.New("invalid or expired token")
+
+	// ErrNotMember is returned when the user is not a member of the team
+	ErrNotMember = errors.New("user is not a member of the team")
+
+	// ErrUserNotFound is returned when no user with that email is found
+	ErrUserNotFound = errors.New("no user with that email")
+
+	// ErrAlreadyMember is returned when the user is already a member of the team
+	ErrAlreadyMember = errors.New("user is already a member of the team")
 )
-
-// ErrInvalidCredentials is returned for both wrong password AND unknown email,
-// so we never reveal which emails are registered.
-var ErrInvalidCredentials = errors.New("invalid email or password")
-
-// ErrInvalidToken is returned for a missing/expired/rotated refresh token
-var ErrInvalidToken = errors.New("invalid or expired token")
-
-// ErrNotMember is returned when the user is not a member of the team
-var ErrNotMember = errors.New("user is not a member of the team")
 
 // Service struct
 
@@ -208,6 +217,29 @@ func (s *Service) MemberRole(ctx context.Context, teamID, userID uuid.UUID) (db.
 
 func (s *Service) ListMembers(ctx context.Context, teamID uuid.UUID) ([]db.ListTeamMembersRow, error) {
 	return s.q.ListTeamMembers(ctx, teamID)
+}
+
+// AddMember adds an existing user (by email) to a team with a role.
+// The handler restricts role to admin/member/viewer — owner is only set at team
+func (s *Service) AddMember(ctx context.Context, teamID uuid.UUID, email string, role db.TeamRole) (db.User, error) {
+	user, err := s.q.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return db.User{}, ErrUserNotFound
+		}
+		return db.User{}, fmt.Errorf("get user by email: %w", err)
+	}
+
+	if _, err := s.q.AddTeamMember(ctx, db.AddTeamMemberParams{
+		TeamID: teamID, UserID: user.ID, Role: role,
+	}); err != nil {
+		if isUniqueViolation(err) { // PK (team_id, user_id) already exists
+			return db.User{}, ErrAlreadyMember
+		}
+		return db.User{}, fmt.Errorf("add team member: %w", err)
+	}
+
+	return user, nil
 }
 
 // Helper functions

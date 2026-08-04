@@ -46,9 +46,9 @@ func Can(role db.TeamRole, perm Permission) bool {
 	if !ok {
 		return false
 	}
-	_, _ = perms[perm]
+	_, has := perms[perm]
 
-	return ok
+	return has
 }
 
 // setOf is a helper to create a map[Permission]struct{} from a list of Permissions.

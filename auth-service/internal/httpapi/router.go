@@ -26,6 +26,7 @@ func NewRouter(st *store.Store, svc *auth.Service, secret, service string) http.
 
 	mux.HandleFunc("POST /teams", requiredAuth(secret, handleCreateTeam(svc))) // ← /api/teams protected by middleware
 	mux.HandleFunc("GET /teams/{teamID}/members", requiredAuth(secret, requirePermission(svc, rbac.MemberView, handleListMembers(svc))))
+	mux.HandleFunc("POST /teams/{teamID}/members", requiredAuth(secret, requirePermission(svc, rbac.MemberInvite, handleAddMember(svc))))
 
 	return logRequests(mux)
 }
