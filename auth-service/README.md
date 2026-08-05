@@ -10,19 +10,22 @@ Identity & access for the Task Manager SaaS: users, authentication (JWT), teams,
 
 Paths are what the service sees *after* Traefik strips `/api/auth` (e.g. `POST /api/auth/login` → `POST /login`).
 
-| Method | Path            | Auth          | Description |
-| ------ | --------------- | ------------- | ----------|
-| GET    | `/health`       | –             | Liveness: the process is up |
-| GET    | `/health/ready` | –             | Readiness: Postgres + Redis reachable (503 if not) |
-| POST   | `/register`     | –             | Create a user; returns tokens (**201**) |
-| POST   | `/login`        | –             | Verify credentials; returns tokens (**200**) |
-| GET    | `/me`           | Bearer        | The current user |
-| POST   | `/teams`        | Bearer        | Create a team + owner membership (**201**) |
-| GET    | `/teams/{teamID}/members` | Bearer        | List a team's members (`member.view`) |
-| POST   | `/refresh`      | refresh token | Rotate: revoke the sent refresh token, return new ones |
-| POST   | `/logout`       | refresh token | Revoke a refresh token (**204**) |
+| Method | Path                               | Auth          | Description |
+| ------ | ---------------------------------- | ------------- | ----------|
+| GET    | `/health`                          | –             | Liveness: the process is up |
+| GET    | `/health/ready`                    | –             | Readiness: Postgres + Redis reachable (503 if not) |
+| POST   | `/register`                        | –             | Create a user; returns tokens (**201**) |
+| POST   | `/login`                           | –             | Verify credentials; returns tokens (**200**) |
+| GET    | `/me`                              | Bearer        | The current user |
+| POST   | `/teams`                           | Bearer        | Create a team + owner membership (**201**) |
+| GET    | `/teams/{teamID}/members`          | Bearer        | List members (`member.view`) |
+| POST   | `/teams/{teamID}/members`          | Bearer        | Add an existing user by email (`member.invite`; **201**) |
+| PATCH  | `/teams/{teamID}/members/{userID}` | Bearer        | Change a member's role (`member.update_role`; **204**) |
+| DELETE | `/teams/{teamID}/members/{userID}` | Bearer        | Remove a member (`member.remove`; **204**) |
+| POST   | `/refresh`                         | refresh token | Rotate: revoke the sent refresh token, return new ones |
+| POST   | `/logout`                          | refresh token | Revoke a refresh token (**204**) |
 
-`/me` and `/teams*` need `Authorization: Bearer <access_token>`. `/refresh` and `/logout` take `{"refresh_token": "..."}`. `/teams` takes `{"name": "..."}`; `POST /teams/{teamID}/members` takes `{"email": "...", "role": "admin|member|viewer"}`.
+`/me` and `/teams*` need `Authorization: Bearer <access_token>`. `/refresh` and `/logout` take `{"refresh_token": "..."}`. `/teams` takes `{"name": "..."}`; `POST …/members` takes `{"email", "role"}`; `PATCH `{"role"}` (admin|member|viewer).
 
 ## Permissions (RBAC)
 
@@ -32,6 +35,10 @@ Team endpoints are authorized by the caller's **role in that team** — resolved
 |---|:--:|:--:|:--:|:--:|
 | `member.view` (list) | ✓ | ✓ | ✓ | ✓ |
 | `member.invite` (add) | ✓ | ✓ | ✗ | ✗ |
+| `member.update_role` (change role) | ✓ | ✓\* | ✗ | ✗ |
+| `member.remove` | ✓ | ✓\* | ✗ | ✗ |
+
+\* On top of RBAC, **owner guards** apply: admins can't modify/remove the owner, only an owner grants the owner role, and the last owner can't be removed or demoted.
 
 ## Tokens
 

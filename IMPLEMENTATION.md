@@ -53,4 +53,6 @@ Versioned SQL in `infra/database/migrations/`, applied on demand via `make migra
     - 3d: `POST /api/auth/teams` create team + owner membership in one transaction.
 - **Step 4 — RBAC / team management (auth-service):**
     - 4a: `internal/rbac` permission catalog + `requirePermission` middleware; list members.
-- **Step 5** *(later)*: `task-service` — boards & tasks with RBAC enforcement.
+    - 4b: add member by email (`POST .../members`, `member.invite`).
+    - 4c: change role / remove member (`PATCH`/`DELETE .../members/{userID}`) with owner guards.
+- **Step 5** *(next)*: `task-service` — boards & tasks with RBAC enforcement.
