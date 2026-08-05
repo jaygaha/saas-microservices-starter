@@ -20,6 +20,10 @@ type addMemberRequest struct {
 	Role  string `json:"role"`
 }
 
+type updateMemberRequest struct {
+	Role string `json:"role"`
+}
+
 type teamDTO struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -140,5 +144,87 @@ func handleAddMember(svc *auth.Service) http.HandlerFunc {
 			FullName: user.FullName.String,
 			Role:     string(role),
 		})
+	}
+}
+
+func handleUpdateMemberRole(svc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		teamID, err := uuid.Parse(r.PathValue("teamID"))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid team id")
+			return
+		}
+
+		targetID, err := uuid.Parse(r.PathValue("userID"))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid user id")
+			return
+		}
+
+		var req updateMemberRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid JSON body")
+			return
+		}
+
+		newRole := db.TeamRole(req.Role)
+		if !isValidRole(newRole) {
+			writeError(w, http.StatusBadRequest, "invalid role; role must be admin, member, or viewer")
+			return
+		}
+
+		callerRole, _ := roleFromContext(r.Context())
+		if err := svc.UpdateMemberRole(r.Context(), teamID, targetID, newRole, callerRole); err != nil {
+			writeMemberErr(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func handleRemoveMember(svc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		teamID, err := uuid.Parse(r.PathValue("teamID"))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid team id")
+			return
+		}
+
+		targetID, err := uuid.Parse(r.PathValue("userID"))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid user id")
+			return
+		}
+
+		callerRole, _ := roleFromContext(r.Context())
+		if err := svc.RemoveMember(r.Context(), teamID, targetID, callerRole); err != nil {
+			writeMemberErr(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func isValidRole(role db.TeamRole) bool {
+	switch role {
+	case db.TeamRoleAdmin, db.TeamRoleMember, db.TeamRoleViewer:
+		return true
+	}
+
+	return false
+}
+
+func writeMemberErr(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, auth.ErrTargetNotMember):
+		writeError(w, http.StatusNotFound, "user is not a member of this team")
+	case errors.Is(err, auth.ErrCannotModifyOwner):
+		writeError(w, http.StatusForbidden, "only owner can modify owner")
+	case errors.Is(err, auth.ErrOwnerGrant):
+		writeError(w, http.StatusForbidden, "owner can not be removed or demoted")
+	case errors.Is(err, auth.ErrLastOwner):
+		writeError(w, http.StatusConflict, "the team must keep at least one owner")
+	default:
+		writeError(w, http.StatusInternalServerError, "could not update membership")
 	}
 }

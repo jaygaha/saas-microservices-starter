@@ -43,6 +43,15 @@ var (
 
 	// ErrAlreadyMember is returned when the user is already a member of the team
 	ErrAlreadyMember = errors.New("user is already a member of the team")
+
+	// ErrTargetNotMember is returned when the target user is not a member of the team
+	ErrTargetNotMember = errors.New("target user is not a member of the team")
+	// ErrCannotModifyOwner is returned when the caller tries to modify the owner
+	ErrCannotModifyOwner = errors.New("only an owner can modify the owner")
+	// ErrOwnerGrant is returned when the caller tries to grant the owner role
+	ErrOwnerGrant = errors.New("only an owner can grant the owner role")
+	// ErrLastOwner is returned when the team must keep at least one owner
+	ErrLastOwner = errors.New("the team must keep at least one owner")
 )
 
 // Service struct
@@ -240,6 +249,67 @@ func (s *Service) AddMember(ctx context.Context, teamID uuid.UUID, email string,
 	}
 
 	return user, nil
+}
+
+// UpdateMemberRole updates the role of a team member.
+// It checks that the target is actually a member, that the new role is allowed, that we don't make someone the owner, and that we don't remove the last owner.
+func (s *Service) UpdateMemberRole(ctx context.Context, teamID, targetID uuid.UUID, newRole, callerRole db.TeamRole) error {
+	target, err := s.q.GetTeamMember(ctx, db.GetTeamMemberParams{
+		TeamID: teamID,
+		UserID: targetID,
+	})
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrTargetNotMember
+		}
+		return fmt.Errorf("get team member: %w", err)
+	}
+
+	if target.Role == db.TeamRoleOwner && callerRole != db.TeamRoleOwner {
+		return ErrCannotModifyOwner // admin can't touch the owner
+	}
+
+	if newRole == db.TeamRoleOwner && callerRole != db.TeamRoleOwner {
+		return ErrOwnerGrant // only an owner grants owner
+	}
+
+	if target.Role == db.TeamRoleOwner && newRole != db.TeamRoleOwner {
+		if err := s.ensureNotLastOwner(ctx, teamID); err != nil { // don't demote the last owner
+			return err
+		}
+	}
+	return s.q.UpdateTeamMemberRole(ctx, db.UpdateTeamMemberRoleParams{TeamID: teamID, UserID: targetID, Role: newRole})
+}
+
+func (s *Service) RemoveMember(ctx context.Context, teamID, targetID uuid.UUID, callerRole db.TeamRole) error {
+	target, err := s.q.GetTeamMember(ctx, db.GetTeamMemberParams{TeamID: teamID, UserID: targetID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrTargetNotMember
+		}
+		return fmt.Errorf("get target: %w", err)
+	}
+	if target.Role == db.TeamRoleOwner {
+		if callerRole != db.TeamRoleOwner {
+			return ErrCannotModifyOwner
+		}
+		if err := s.ensureNotLastOwner(ctx, teamID); err != nil {
+			return err
+		}
+	}
+	return s.q.RemoveTeamMember(ctx, db.RemoveTeamMemberParams{TeamID: teamID, UserID: targetID})
+}
+
+func (s *Service) ensureNotLastOwner(ctx context.Context, teamID uuid.UUID) error {
+	owners, err := s.q.CountTeamOwners(ctx, teamID)
+	if err != nil {
+		return fmt.Errorf("count owners: %w", err)
+	}
+	if owners <= 1 {
+		return ErrLastOwner
+	}
+	return nil
 }
 
 // Helper functions

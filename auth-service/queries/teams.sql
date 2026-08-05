@@ -18,3 +18,15 @@ FROM team_members tm
 INNER JOIN users u ON tm.user_id = u.id
 WHERE tm.team_id = $1 AND u.deleted_at IS NULL
 ORDER BY tm.created_at;
+
+-- name: UpdateTeamMemberRole :exec
+UPDATE team_members SET role = $3, updated_at = now()
+WHERE team_id = $1 AND user_id = $2;
+
+-- name: RemoveTeamMember :exec
+DELETE FROM team_members
+WHERE team_id = $1 AND user_id = $2;
+
+-- name: CountTeamOwners :one
+SELECT count(*) FROM team_members
+WHERE team_id = $1 AND role = 'owner';

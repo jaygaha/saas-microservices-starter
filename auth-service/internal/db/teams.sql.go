@@ -37,6 +37,18 @@ func (q *Queries) AddTeamMember(ctx context.Context, arg AddTeamMemberParams) (T
 	return i, err
 }
 
+const countTeamOwners = `-- name: CountTeamOwners :one
+SELECT count(*) FROM team_members
+WHERE team_id = $1 AND role = 'owner'
+`
+
+func (q *Queries) CountTeamOwners(ctx context.Context, teamID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countTeamOwners, teamID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createTeam = `-- name: CreateTeam :one
 INSERT INTO teams (name, slug, created_by)
 VALUES ($1, $2, $3)
@@ -127,4 +139,35 @@ func (q *Queries) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]List
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeTeamMember = `-- name: RemoveTeamMember :exec
+DELETE FROM team_members
+WHERE team_id = $1 AND user_id = $2
+`
+
+type RemoveTeamMemberParams struct {
+	TeamID uuid.UUID `json:"team_id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error {
+	_, err := q.db.Exec(ctx, removeTeamMember, arg.TeamID, arg.UserID)
+	return err
+}
+
+const updateTeamMemberRole = `-- name: UpdateTeamMemberRole :exec
+UPDATE team_members SET role = $3, updated_at = now()
+WHERE team_id = $1 AND user_id = $2
+`
+
+type UpdateTeamMemberRoleParams struct {
+	TeamID uuid.UUID `json:"team_id"`
+	UserID uuid.UUID `json:"user_id"`
+	Role   TeamRole  `json:"role"`
+}
+
+func (q *Queries) UpdateTeamMemberRole(ctx context.Context, arg UpdateTeamMemberRoleParams) error {
+	_, err := q.db.Exec(ctx, updateTeamMemberRole, arg.TeamID, arg.UserID, arg.Role)
+	return err
 }
