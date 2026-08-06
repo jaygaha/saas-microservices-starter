@@ -1,34 +1,38 @@
-# task-service owns the "work" domain (boards, tasks).
-# Step 1 is intentionally tiny: a health check + a root echo, so we can verify
-# Traefik routes to a SECOND, non-Go service. Domain logic comes in later steps.
-import os
-from datetime import datetime, timezone
-  
-from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
 
-SERVICE_NAME = os.getenv("SERVICE_NAME", "task-service")
-  
-app = FastAPI(title=SERVICE_NAME)
+import asyncpg
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+
+import boards
+from config import config as cfg
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.config = cfg
+    app.state.pool = await asyncpg.create_pool(dsn=cfg.database_url, min_size=1, max_size=10)
+    try: 
+        yield
+    finally:
+        await app.state.pool.close()
+
+
+app = FastAPI(lifespan=lifespan, title=cfg.service_name)
+
+app.include_router(boards.router)
 
 @app.get("/health")
 def health():
     return {
         "status": "ok",
-        "service": SERVICE_NAME,
-        "time": datetime.now(timezone.utc).isoformat(),
-    }
-      
-
-# Catch-all echo, declared AFTER /health so /health wins. Lets you SEE prefix
-# stripping: GET /api/tasks/anything at the gateway arrives here as /anything.
-@app.get("/{full_path:path}")
-def root(request: Request, full_path: str):
-    return {
-        "service": SERVICE_NAME,
-        "message": "this request reached the service through Traefik",
-        "path": request.url.path,
+        "service": cfg.service_name,
     }
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8001")))
+@app.get("/health/ready")
+async def ready():
+    try:
+        async with app.state.pool.acquire() as conn:
+            await conn.execute("SELECT 1")
+        return {"status": "ready", "service": cfg.service_name}
+    except Exception as exc:  # noqa: BLE001
+        return JSONResponse(status_code=503, content={"status": "unavailable", "error": str(exc)})

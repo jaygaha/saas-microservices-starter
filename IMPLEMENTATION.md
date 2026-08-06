@@ -51,8 +51,11 @@ Versioned SQL in `infra/database/migrations/`, applied on demand via `make migra
     - 3b: register + login bcrypt, access JWT (HS256) + Redis-backed refresh token.
     - 3c: `/me` (JWT middleware), refresh-token rotation, logout.
     - 3d: `POST /api/auth/teams` create team + owner membership in one transaction.
-- **Step 4 — RBAC / team management (auth-service):**
+- **Step 4 RBAC / team management (auth-service):**
     - 4a: `internal/rbac` permission catalog + `requirePermission` middleware; list members.
     - 4b: add member by email (`POST .../members`, `member.invite`).
     - 4c: change role / remove member (`PATCH`/`DELETE .../members/{userID}`) with owner guards.
-- **Step 5** *(next)*: `task-service` — boards & tasks with RBAC enforcement.
+- **Step 5 task-service (boards & tasks, cross-service RBAC):**
+    - 5a: boards create/list. Identity-only JWT verified with the shared `JWT_SECRET`; caller's role resolved directly from the shared `team_members` table (single `authz` seam); Python permission catalog mirrors Go's `internal/rbac`. Verified E2E: owner create 201 / list shows board; viewer create 403 /list 200; non-member 403; no-token 401.
+    - 5b *(next)*: board get / update / delete.
+    - 5c *(next)*: tasks CRUD + assign (`task.*`).
