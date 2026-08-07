@@ -25,12 +25,17 @@ Steps 3-4 live behind a single `authz` module: the one seam to change if we late
 | GET    | `/api/tasks/health/ready`| –      | –              | Readiness (pings the DB pool)  |
 | POST   | `/api/tasks/boards`      | Bearer | `board.create` | Create a board in a team       |
 | GET    | `/api/tasks/boards?team_id=` | Bearer | `board.view` | List a team's boards          |
+| GET    | `/api/tasks/boards/{id}` | Bearer | `board.view`   | Get one board                  |
+| PATCH  | `/api/tasks/boards/{id}` | Bearer | `board.update` | Rename a board                 |
+| DELETE | `/api/tasks/boards/{id}` | Bearer | `board.delete` | Soft-delete a board (`204`)    |
 
 
 - `POST /boards` body: `{"team_id": "<uuid>", "name": "..."}` → `201 {id, team_id, name, created_by}`.
 - `GET /boards?team_id=<uuid>` → `200 {"boards": [{id, team_id, name, created_by}, ...]}`.
+- `PATCH /boards/{id}` body: `{"name": "..."}` → `200 BoardOut`. 
+- `DELETE /boards/{id}` → `204`(soft delete). For `{id}` routes the team is resolved from the board itself, so a non-member gets `403` and an unknown/deleted board gets `404`.
 
-> Board get/update/delete and tasks CRUD + assign are not built yet, but their permissions already exist in the catalog below.
+> Tasks CRUD + assign are not built yet, but their permissions already exist in the catalog below.
 
 ## Permissions (RBAC matrix)
 

@@ -57,5 +57,9 @@ Versioned SQL in `infra/database/migrations/`, applied on demand via `make migra
     - 4c: change role / remove member (`PATCH`/`DELETE .../members/{userID}`) with owner guards.
 - **Step 5 task-service (boards & tasks, cross-service RBAC):**
     - 5a: boards create/list. Identity-only JWT verified with the shared `JWT_SECRET`; caller's role resolved directly from the shared `team_members` table (single `authz` seam); Python permission catalog mirrors Go's `internal/rbac`. Verified E2E: owner create 201 / list shows board; viewer create 403 /list 200; non-member 403; no-token 401.
-    - 5b *(next)*: board get / update / delete.
+    - 5b: board get / update / delete. Team resolved from the board (`board → team_id`); soft-delete via `deleted_at` → `204`; `board.delete` restricted to owner/admin.
+      - Verified:
+        - GET all-members 200 / non-member 403 / bogus 404
+        - PATCH viewer 403, member+owner 200
+        - DELETE viewer+member 403, owner 204, repeat + GET-after 404.
     - 5c *(next)*: tasks CRUD + assign (`task.*`).
