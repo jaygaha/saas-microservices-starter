@@ -62,4 +62,5 @@ Versioned SQL in `infra/database/migrations/`, applied on demand via `make migra
         - GET all-members 200 / non-member 403 / bogus 404
         - PATCH viewer 403, member+owner 200
         - DELETE viewer+member 403, owner 204, repeat + GET-after 404.
-    - 5c *(next)*: tasks CRUD + assign (`task.*`).
+    - 5c: tasks CRUD + assign. Team resolved task → board → team; `task.assign` enforces a business rule (assignee must be a team member, else 400); partial PATCH via `COALESCE`; soft-delete → 204; task under a soft-deleted board → 404.
+    - Verified E2E across owner/member/viewer/non-member (41 checks).

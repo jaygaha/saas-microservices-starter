@@ -28,14 +28,21 @@ Steps 3-4 live behind a single `authz` module: the one seam to change if we late
 | GET    | `/api/tasks/boards/{id}` | Bearer | `board.view`   | Get one board                  |
 | PATCH  | `/api/tasks/boards/{id}` | Bearer | `board.update` | Rename a board                 |
 | DELETE | `/api/tasks/boards/{id}` | Bearer | `board.delete` | Soft-delete a board (`204`)    |
+| POST   | `/api/tasks/tasks`             | Bearer | `task.create` | Create a task in a board         |
+| GET    | `/api/tasks/tasks?board_id=`   | Bearer | `task.view`   | List a board's tasks             |
+| GET    | `/api/tasks/tasks/{id}`        | Bearer | `task.view`   | Get one task                     |
+| PATCH  | `/api/tasks/tasks/{id}`        | Bearer | `task.update` | Update title/description/status  |
+| PATCH  | `/api/tasks/tasks/{id}/assign` | Bearer | `task.assign` | Assign / unassign a task         |
+| DELETE | `/api/tasks/tasks/{id}`        | Bearer | `task.delete` | Soft-delete a task (`204`)       |
 
 
 - `POST /boards` body: `{"team_id": "<uuid>", "name": "..."}` → `201 {id, team_id, name, created_by}`.
 - `GET /boards?team_id=<uuid>` → `200 {"boards": [{id, team_id, name, created_by}, ...]}`.
 - `PATCH /boards/{id}` body: `{"name": "..."}` → `200 BoardOut`. 
 - `DELETE /boards/{id}` → `204`(soft delete). For `{id}` routes the team is resolved from the board itself, so a non-member gets `403` and an unknown/deleted board gets `404`.
-
-> Tasks CRUD + assign are not built yet, but their permissions already exist in the catalog below.
+- `POST /tasks` body `{board_id, title, description?}` → `201 TaskOut` (status defaults `todo`).
+- `PATCH /tasks/{id}` accepts any of `{title, description, status}` with `status ∈ {todo, in_progress, done}`.
+- `PATCH /tasks/{id}/assign` body `{assignee_id}` (or `null` to unassign): the assignee must belong to the task's team, else `400`. A task under a soft-deleted board is `404` (the team is resolved task → board → team).
 
 ## Permissions (RBAC matrix)
 

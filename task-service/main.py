@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 import boards
+import tasks
 from config import config as cfg
 
 @asynccontextmanager
@@ -20,6 +21,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, title=cfg.service_name)
 
 app.include_router(boards.router)
+app.include_router(tasks.router)
 
 @app.get("/health")
 def health():
