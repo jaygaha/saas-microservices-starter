@@ -312,6 +312,11 @@ func (s *Service) ensureNotLastOwner(ctx context.Context, teamID uuid.UUID) erro
 	return nil
 }
 
+// ListTeamsForUser returns every team the user belongs to, with their role in each
+func (s *Service) ListTeamsForUser(ctx context.Context, userID uuid.UUID) ([]db.ListTeamsForUserRow, error) {
+	return s.q.ListTeamsForUser(ctx, userID)
+}
+
 // Helper functions
 
 // It checks if the error is a unique constraint violation.

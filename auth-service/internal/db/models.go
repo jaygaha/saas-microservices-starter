@@ -12,6 +12,49 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type TaskStatus string
+
+const (
+	TaskStatusTodo       TaskStatus = "todo"
+	TaskStatusInProgress TaskStatus = "in_progress"
+	TaskStatusDone       TaskStatus = "done"
+)
+
+func (e *TaskStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TaskStatus(s)
+	case string:
+		*e = TaskStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TaskStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTaskStatus struct {
+	TaskStatus TaskStatus `json:"task_status"`
+	Valid      bool       `json:"valid"` // Valid is true if TaskStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTaskStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TaskStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TaskStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTaskStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TaskStatus), nil
+}
+
 type TeamRole string
 
 const (
@@ -54,6 +97,29 @@ func (ns NullTeamRole) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.TeamRole), nil
+}
+
+type Board struct {
+	ID        uuid.UUID          `json:"id"`
+	TeamID    uuid.UUID          `json:"team_id"`
+	Name      string             `json:"name"`
+	CreatedBy uuid.UUID          `json:"created_by"`
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Task struct {
+	ID          uuid.UUID          `json:"id"`
+	BoardID     uuid.UUID          `json:"board_id"`
+	Title       string             `json:"title"`
+	Description pgtype.Text        `json:"description"`
+	Status      TaskStatus         `json:"status"`
+	AssigneeID  pgtype.UUID        `json:"assignee_id"`
+	CreatedBy   uuid.UUID          `json:"created_by"`
+	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Team struct {
