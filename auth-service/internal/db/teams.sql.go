@@ -141,6 +141,46 @@ func (q *Queries) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]List
 	return items, nil
 }
 
+const listTeamsForUser = `-- name: ListTeamsForUser :many
+SELECT t.id, t.name, t.slug, tm.role
+FROM team_members tm
+INNER JOIN teams t ON t.id = tm.team_id
+WHERE tm.user_id = $1 AND t.deleted_at IS NULL
+ORDER BY t.created_at
+`
+
+type ListTeamsForUserRow struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	Slug string    `json:"slug"`
+	Role TeamRole  `json:"role"`
+}
+
+func (q *Queries) ListTeamsForUser(ctx context.Context, userID uuid.UUID) ([]ListTeamsForUserRow, error) {
+	rows, err := q.db.Query(ctx, listTeamsForUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTeamsForUserRow
+	for rows.Next() {
+		var i ListTeamsForUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.Role,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeTeamMember = `-- name: RemoveTeamMember :exec
 DELETE FROM team_members
 WHERE team_id = $1 AND user_id = $2

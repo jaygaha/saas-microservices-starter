@@ -37,6 +37,13 @@ type memberDTO struct {
 	Role     string `json:"role"`
 }
 
+type teamWithRoleDTO struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+	Role string `json:"role"`
+}
+
 func handleCreateTeam(svc *auth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := userIDFromContext(r.Context())
@@ -202,6 +209,33 @@ func handleRemoveMember(svc *auth.Service) http.HandlerFunc {
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func handleListTeams(svc *auth.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := userIDFromContext(r.Context())
+		if !ok {
+			writeError(w, http.StatusUnauthorized, "unauthenticated")
+			return
+		}
+
+		rows, err := svc.ListTeamsForUser(r.Context(), userID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "could not list teams")
+			return
+		}
+
+		out := make([]teamWithRoleDTO, 0, len(rows))
+		for _, row := range rows {
+			out = append(out, teamWithRoleDTO{
+				ID:   row.ID.String(),
+				Name: row.Name,
+				Slug: row.Slug,
+				Role: string(row.Role),
+			})
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"teams": out})
 	}
 }
 
