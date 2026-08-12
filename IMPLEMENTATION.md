@@ -64,3 +64,9 @@ Versioned SQL in `infra/database/migrations/`, applied on demand via `make migra
         - DELETE viewer+member 403, owner 204, repeat + GET-after 404.
     - 5c: tasks CRUD + assign. Team resolved task → board → team; `task.assign` enforces a business rule (assignee must be a team member, else 400); partial PATCH via `COALESCE`; soft-delete → 204; task under a soft-deleted board → 404.
     - Verified E2E across owner/member/viewer/non-member (41 checks).
+- [**Step 6 web-service**](web-service/README.md)
+    - 6a: scaffold + auth foundation (api client, session, context).
+    - 6b: teams: list + create, members with role badges (RBAC-gated).
+    - 6c: boards: CRUD (RBAC-gated).
+    - 6d: tasks: kanban CRUD + assign + status.
+    - 6e: polish + Docker/nginx/Traefik integrated serving.
