@@ -3,7 +3,7 @@
 The browser client for the Task Manager SaaS: a clean, minimalist SPA that talks to the platform through the Traefik gateway (`/api/*`).
 
 - **Stack:** React 19 + Vite 8 + TypeScript
-- **Styling:** Tailwind CSS v4 (CSS-first — tokens in `src/index.css` via `@theme`, no `tailwind config.js`)
+- **Styling:** Tailwind CSS v4 (CSS-first — tokens in `src/index.css` via `@theme`, no `tailwind.config.js`)
 - **Routing:** React Router v7 · **Server state:** TanStack Query v5 · **Session state:** React Context
 - **Gateway route:** served at `/` (prod); the app only ever calls same-origin `/api/*`
 - **Internal port:** `3000` (`FRONTEND_SERVICE_PORT`)
@@ -36,7 +36,7 @@ src/
 
 - **Access token** kept in memory only (never written to disk).
 - **Refresh token** stored in `localStorage`.
-- **On boot** if a refresh token exists, the first `/me` call 401s and `api()` transparently refreshes (rotating the token) and retries, so sessions survive a page reload.
+- **On boot** if a refresh token exists, the client refreshes first to obtain an access token, then loads the user once (`ensureSession` → `/me`) — so a reload survives with a single refresh + single `/me`, no wasted 401.
 - **On any 401** a single-flight refresh runs (concurrent requests share one refresh), then the original request retries once; if refresh fails, the session is cleared.
 - **Rotation-aware** the backend issues a new refresh token on every refresh; the client always persists the latest one.
 
@@ -69,7 +69,7 @@ npm run lint         # oxlint
 
 ## Backlog
 
-- [-] **a** scaffold + auth foundation (api client, session, context).
+- [x] **a** scaffold + auth foundation (api client, session, context).
 - [ ] **b** teams: list + create, members with role badges (RBAC-gated).
 - [ ] **c** boards: CRUD (RBAC-gated).
 - [ ] **d** tasks: kanban CRUD + assign + status.
