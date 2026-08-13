@@ -69,4 +69,10 @@ Versioned SQL in `infra/database/migrations/`, applied on demand via `make migra
     - 6b: teams: list + create, members with role badges (RBAC-gated).
     - 6c: boards: CRUD (RBAC-gated).
     - 6d: tasks: kanban CRUD + assign + status.
+    - 6-pre: `GET /api/auth/teams` (caller's teams + role) added to auth-service — the frontend's team switcher + RBAC data source.
+    - 6a: scaffold (Vite/React/TS, Tailwind v4 CSS-first) + auth foundation. Typed fetch client (in-memory access token + `localStorage` refresh, single-flight `401 → refresh → retry`, rotation-aware), `AuthContext` with refresh-first boot, login/register, `ProtectedRoute`, Teams landing. Dev server proxies `/api` → gateway.
+    - Verified E2E via the proxy: login / `/me` / teams / refresh rotation; reload-survival + logout confirmed in-browser.
+    - 6b (next): teams — list + create, members with role badges (RBAC-gated).
+    - 6c: boards — CRUD (RBAC-gated).
+    - 6d: tasks — kanban CRUD + assign + status.
     - 6e: polish + Docker/nginx/Traefik integrated serving.
