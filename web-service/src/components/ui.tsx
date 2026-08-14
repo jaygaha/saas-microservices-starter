@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes, ReactNode } from 'react'
 
 export function Button({
     variant = 'primary',
@@ -44,4 +44,26 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
 
 export function Spinner() {
     return <div className="grid min-h-[40vh] place-items-center text-sm text-muted">Loading…</div>
+}
+
+export function Select({
+    label,
+    className = '',
+    children,
+    ...props
+}: SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
+    return (
+        <label className="block">
+            {label && <span className="mb-1 block text-sm font-medium text-ink">{label}</span>}
+            <select
+                className={
+                    'w-full rounded-md border border-line bg-surface px-3 py-2 text-sm ' +
+                    'outline-none focus:border-brand ' + className
+                }
+                {...props}
+            >
+                {children}
+            </select>
+        </label>
+    )
 }
