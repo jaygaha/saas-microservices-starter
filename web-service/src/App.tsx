@@ -4,6 +4,7 @@ import { Layout } from './components/Layout'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { Teams } from './pages/Teams'
+import { TeamDetail } from './pages/TeamDetail'
 
 function App() {
 	return (
@@ -15,6 +16,14 @@ function App() {
 				element={
 					<ProtectedRoute>
 						<Layout><Teams /></Layout>
+					</ProtectedRoute>
+				}
+			/>
+			<Route
+				path="/teams/:id"
+				element={
+					<ProtectedRoute>
+						<Layout><TeamDetail /></Layout>
 					</ProtectedRoute>
 				}
 			/>

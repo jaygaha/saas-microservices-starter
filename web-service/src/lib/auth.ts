@@ -1,5 +1,5 @@
 import { api, setSession, clearSession, getRefreshToken } from './api'
-import type { AuthResponse, User, Team } from '../types'
+import type { AuthResponse, User } from '../types'
 
 export async function login(email: string, password: string): Promise<User> {
     const data = await api<AuthResponse>('/auth/login', {
@@ -32,9 +32,3 @@ export async function logout(): Promise<void> {
         clearSession()
     }
 }
-
-export async function listTeams(): Promise<Team[]> {
-    const data = await api<{ teams: Team[] }>('/auth/teams')
-    return data.teams
-}
-

@@ -66,13 +66,7 @@ Versioned SQL in `infra/database/migrations/`, applied on demand via `make migra
     - Verified E2E across owner/member/viewer/non-member (41 checks).
 - [**Step 6 web-service**](web-service/README.md)
     - 6a: scaffold + auth foundation (api client, session, context).
-    - 6b: teams: list + create, members with role badges (RBAC-gated).
-    - 6c: boards: CRUD (RBAC-gated).
+    - 6b: teams: create team; `TeamDetail` with members list + role badges; add / update-role / remove gated by the mirrored catalog (`rbac.ts`, caller's role from the teams list). Verified via proxy: owner `add/change/remove` → `201/204/204`; viewer `list 200` but `add 403` (UI gating agrees with the server).
+    - 6c (next): boards: CRUD (RBAC-gated)
     - 6d: tasks: kanban CRUD + assign + status.
-    - 6-pre: `GET /api/auth/teams` (caller's teams + role) added to auth-service — the frontend's team switcher + RBAC data source.
-    - 6a: scaffold (Vite/React/TS, Tailwind v4 CSS-first) + auth foundation. Typed fetch client (in-memory access token + `localStorage` refresh, single-flight `401 → refresh → retry`, rotation-aware), `AuthContext` with refresh-first boot, login/register, `ProtectedRoute`, Teams landing. Dev server proxies `/api` → gateway.
-    - Verified E2E via the proxy: login / `/me` / teams / refresh rotation; reload-survival + logout confirmed in-browser.
-    - 6b (next): teams — list + create, members with role badges (RBAC-gated).
-    - 6c: boards — CRUD (RBAC-gated).
-    - 6d: tasks — kanban CRUD + assign + status.
     - 6e: polish + Docker/nginx/Traefik integrated serving.

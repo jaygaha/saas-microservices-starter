@@ -70,7 +70,7 @@ npm run lint         # oxlint
 ## Backlog
 
 - [x] **a** scaffold + auth foundation (api client, session, context).
-- [ ] **b** teams: list + create, members with role badges (RBAC-gated).
+- [x] **b** teams: list + create, members with role badges (RBAC-gated).
 - [ ] **c** boards: CRUD (RBAC-gated).
 - [ ] **d** tasks: kanban CRUD + assign + status.
 - [ ] **e** polish + Docker/nginx/Traefik integrated serving.
