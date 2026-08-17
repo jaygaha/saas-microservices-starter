@@ -72,5 +72,5 @@ npm run lint         # oxlint
 - [x] **a** scaffold + auth foundation (api client, session, context).
 - [x] **b** teams: list + create, members with role badges (RBAC-gated).
 - [x] **c** boards: CRUD (RBAC-gated).
-- [ ] **d** tasks: kanban CRUD + assign + status.
+- [x] **d** tasks: kanban CRUD + assign + status.
 - [ ] **e** polish + Docker/nginx/Traefik integrated serving.
