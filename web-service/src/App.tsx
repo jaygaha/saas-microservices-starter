@@ -5,6 +5,7 @@ import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { Teams } from './pages/Teams'
 import { TeamDetail } from './pages/TeamDetail'
+import { BoardDetail } from './pages/BoardDetail'
 
 function App() {
 	return (
@@ -24,6 +25,14 @@ function App() {
 				element={
 					<ProtectedRoute>
 						<Layout><TeamDetail /></Layout>
+					</ProtectedRoute>
+				}
+			/>
+			<Route
+				path="/teams/:teamId/boards/:boardId"
+				element={
+					<ProtectedRoute>
+						<Layout><BoardDetail /></Layout>
 					</ProtectedRoute>
 				}
 			/>

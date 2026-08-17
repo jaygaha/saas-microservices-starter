@@ -8,6 +8,7 @@ import { can, P } from '../lib/rbac'
 import { ApiError } from '../lib/api'
 import type { Role } from '../types'
 import { Button, Card, Input, Select } from '../components/ui'
+import { BoardsPanel } from '../components/BoardsPanel'
 
 const ASSIGNABLE: Role[] = ['admin', 'member', 'viewer']
 
@@ -187,6 +188,8 @@ export function TeamDetail() {
                     </ul>
                 )}
             </Card>
+
+            <BoardsPanel teamId={id} role={myRole} />
         </div>
     )
 }

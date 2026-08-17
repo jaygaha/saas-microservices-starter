@@ -67,6 +67,6 @@ Versioned SQL in `infra/database/migrations/`, applied on demand via `make migra
 - [**Step 6 web-service**](web-service/README.md)
     - 6a: scaffold + auth foundation (api client, session, context).
     - 6b: teams: create team; `TeamDetail` with members list + role badges; add / update-role / remove gated by the mirrored catalog (`rbac.ts`, caller's role from the teams list). Verified via proxy: owner `add/change/remove` → `201/204/204`; viewer `list 200` but `add 403` (UI gating agrees with the server).
-    - 6c (next): boards: CRUD (RBAC-gated)
-    - 6d: tasks: kanban CRUD + assign + status.
+    - 6c: boards: `BoardsPanel` on team detail (list + create + rename + delete via task-service `/tasks/boards`), gated by `board.create` / `board.update` / `board.delete`; `BoardDetail` route stub. Verified via proxy: owner create/rename/delete → 201/200/204; member create 201 but delete 403; viewer create 403 — UI gating matches the server.
+    - 6d (next): tasks: kanban CRUD + assign + status.
     - 6e: polish + Docker/nginx/Traefik integrated serving.
