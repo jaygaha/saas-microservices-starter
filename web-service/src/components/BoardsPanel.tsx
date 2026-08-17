@@ -5,8 +5,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { listBoards, createBoard, updateBoard, deleteBoard } from '../lib/boards'
 import { can, P } from '../lib/rbac'
 import { ApiError } from '../lib/api'
-import type { Role } from '../types'
-import { Button, Card, Input } from './ui'
+import type { Board, Role } from '../types'
+import { Button, Card, Input, Modal, ConfirmModal } from './ui'
 
 export function BoardsPanel({ teamId, role }: { teamId: string; role: Role | undefined }) {
     const qc = useQueryClient()
@@ -22,6 +22,8 @@ export function BoardsPanel({ teamId, role }: { teamId: string; role: Role | und
 
     const [name, setName] = useState("")
     const [error, setError] = useState<string | null>(null)
+    const [renaming, setRenaming] = useState<Board | null>(null)
+    const [deleting, setDeleting] = useState<Board | null>(null)
     const invalidated = () => qc.invalidateQueries({ queryKey: ["boards", teamId] })
     const msg = (e: unknown, f: string) => (e instanceof ApiError ? e.message : f)
 
@@ -46,15 +48,6 @@ export function BoardsPanel({ teamId, role }: { teamId: string; role: Role | und
     function onCreate(ev: SubmitEvent) {
         ev.preventDefault()
         if (name.trim()) create.mutate()
-    }
-
-    function onUpdate(id: string, currentName: string) {
-        const next = window.prompt('Board name', currentName);
-        if (next && next.trim() && next.trim() !== currentName) update.mutate({ id, name: next.trim() })
-    }
-
-    function onDelete(id: string, name: string) {
-        if (window.confirm(`Delete board "${name}"? This can't be undone.`)) remove.mutate(id);
     }
 
     return (
@@ -87,11 +80,11 @@ export function BoardsPanel({ teamId, role }: { teamId: string; role: Role | und
                             <div className="flex items-center gap-2">
                                 {canUpdate && (
                                     <Button variant="ghost" className="px-2 py-1 text-xs"
-                                        onClick={() => onUpdate(b.id, b.name)}>Rename</Button>
+                                        onClick={() => setRenaming(b)}>Rename</Button>
                                 )}
                                 {canDelete && (
-                                    <Button variant="ghost" className="px-2 py-1 text-xs"
-                                        onClick={() => onDelete(b.id, b.name)}>Delete</Button>
+                                    <Button variant="danger" className="px-2 py-1 text-xs"
+                                        onClick={() => setDeleting(b)}>Delete</Button>
                                 )}
                             </div>
                         </li>
@@ -100,6 +93,71 @@ export function BoardsPanel({ teamId, role }: { teamId: string; role: Role | und
             ) : (
                 <p className="mt-3 text-sm text-muted">No boards yet.</p>
             )}
+
+            {renaming && (
+                <RenameBoardModal
+                    board={renaming}
+                    saving={update.isPending}
+                    onClose={() => setRenaming(null)}
+                    onSave={(nm) => update.mutate({ id: renaming.id, name: nm }, { onSuccess: () => setRenaming(null) })}
+                />
+            )}
+            {deleting && (
+                <ConfirmModal
+                    open
+                    danger
+                    title="Delete board"
+                    message={`Delete "${deleting.name}"? This can't be undone.`}
+                    confirmLabel="Delete"
+                    busy={remove.isPending}
+                    onClose={() => setDeleting(null)}
+                    onConfirm={() => remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })}
+                />
+            )}
         </Card>
+    )
+}
+
+function RenameBoardModal({
+    board,
+    saving,
+    onClose,
+    onSave,
+}: {
+    board: Board
+    saving: boolean
+    onClose: () => void
+    onSave: (name: string) => void
+}) {
+    const [name, setName] = useState(board.name)
+    const ok = name.trim() && name.trim() !== board.name
+
+    function onSubmit(ev: SubmitEvent) {
+        ev.preventDefault()
+        if (ok) onSave(name.trim())
+        else onClose()
+    }
+
+    return (
+        <Modal open title="Rename board" onClose={onClose}>
+            <form onSubmit={onSubmit}>
+                <Input
+                    autoFocus
+                    label="Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Roadmap"
+                    disabled={saving}
+                />
+                <div className="mt-4 flex justify-end gap-2">
+                    <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" disabled={!ok || saving}>
+                        {saving ? 'Saving…' : 'Rename'}
+                    </Button>
+                </div>
+            </form>
+        </Modal>
     )
 }

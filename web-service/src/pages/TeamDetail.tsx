@@ -134,7 +134,7 @@ export function TeamDetail() {
                                         </span>
                                     )}
                                     {canRemove && m.role !== 'owner' && (
-                                        <Button variant="ghost" className="px-2 py-1 text-xs"
+                                        <Button variant="danger" className="px-2 py-1 text-xs"
                                             onClick={() => remove.mutate(m.user_id)}>
                                             Remove
                                         </Button>
@@ -177,7 +177,7 @@ export function TeamDetail() {
                                         </span>
                                     )}
                                     {canRemove && m.role !== 'owner' && (
-                                        <Button variant="ghost" className="px-2 py-1 text-xs"
+                                        <Button variant="danger" className="px-2 py-1 text-xs"
                                             onClick={() => remove.mutate(m.user_id)}>
                                             Remove
                                         </Button>
