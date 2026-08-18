@@ -1,4 +1,5 @@
 COMPOSE = docker compose -f infra/compose.yaml --env-file .env
+DEV = docker compose -f infra/compose.yaml -f infra/compose.dev.yaml --env-file .env $(PROFILE)
 PROFILE = --profile core
 # --- Migrations (golang-migrate, one-shot) ---
 MIGRATE = $(COMPOSE) --profile migrate run --rm migrate
@@ -54,6 +55,15 @@ smoke: ## Health-check the running stack (gateway + services)
 	@curl -fsS $(BASE)/api/auth/health/ready >/dev/null && echo "  ✓ auth-service ready"   || { echo "  ✗ auth-service";  exit 1; }
 	@curl -fsS $(BASE)/api/tasks/health >/dev/null && echo "  ✓ task-service healthy" || { echo "  ✗ task-service";  exit 1; }
 	@echo "smoke: OK"
+
+up-dev: ## Start the stack with the frontend in dev mode (Vite + HMR) at :3000
+	$(DEV) up -d --build
+
+down-dev: ## Stop the dev stack
+	$(DEV) down
+
+logs-dev: ## Tail the dev frontend logs
+	$(DEV) logs -f web-service
 
 restart: down up ## Restart the whole stack
 

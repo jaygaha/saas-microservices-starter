@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { listTeams, createTeam } from '../lib/teams'
 import { ApiError } from '../lib/api'
 import { Button, Card, Input, Spinner } from '../components/ui'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 
 const roleColor: Record<string, string> = {
     owner: 'bg-brand/10 text-brand',
@@ -15,6 +16,8 @@ const roleColor: Record<string, string> = {
 }
 
 export function Teams() {
+    useDocumentTitle('Teams')
+
     const qc = useQueryClient()
     const { data: teams, isLoading, error } = useQuery({ queryKey: ['teams'], queryFn: listTeams })
     const [name, setName] = useState('')

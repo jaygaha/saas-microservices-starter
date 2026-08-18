@@ -9,6 +9,7 @@ import { ApiError } from '../lib/api'
 import type { Role } from '../types'
 import { Button, Card, Input, Select } from '../components/ui'
 import { BoardsPanel } from '../components/BoardsPanel'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 
 const ASSIGNABLE: Role[] = ['admin', 'member', 'viewer']
 
@@ -27,6 +28,8 @@ export function TeamDetail() {
     const { data: teams } = useQuery({ queryKey: ['teams'], queryFn: listTeams })
     const team = teams?.find((t) => t.id === id)
     const myRole = team?.role
+
+    useDocumentTitle(team?.name ?? 'Team')
 
     const { data: members, isLoading } = useQuery({
         queryKey: ['members', id],
