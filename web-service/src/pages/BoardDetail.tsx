@@ -11,6 +11,7 @@ import { ApiError } from '../lib/api'
 import type { Task, TaskStatus } from '../types'
 import { Button, Card, Input, Modal, ConfirmModal } from '../components/ui'
 import { TaskCard } from '../components/TaskCard'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 
 const COLUMNS: { value: TaskStatus; label: string }[] = [
     { value: 'todo', label: 'To do' },
@@ -19,6 +20,7 @@ const COLUMNS: { value: TaskStatus; label: string }[] = [
 ]
 
 export function BoardDetail() {
+
     const { teamId = '', boardId = '' } = useParams()
     const qc = useQueryClient()
 
@@ -28,8 +30,11 @@ export function BoardDetail() {
         enabled: !!boardId,
     })
 
+    useDocumentTitle(board?.name ?? 'Board')
+
     const { data: teams } = useQuery({ queryKey: ['teams'], queryFn: listTeams })
     const role = teams?.find((t) => t.id === board?.team_id)?.role
+
 
     const { data: members } = useQuery({
         queryKey: ['members', board?.team_id],

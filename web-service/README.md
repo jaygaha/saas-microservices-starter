@@ -12,8 +12,8 @@ The browser client for the Task Manager SaaS: a clean, minimalist SPA that talks
 
 | Mode | How |
 | ---- | --- |
-| **Dev** | Vite dev server on `:3000`; `/api` is proxied to the gateway (`VITE_PROXY_TARGET`) so the browser stays same-origin; identical to prod. |
-| **Prod** | Static build served by nginx (SPA fallback); Traefik routes `/` here and `/api/*` to the services. *(Docker/Traefik later)* |
+| **Dev** | `npm run dev` (host) or `make up-dev` (Docker) → Vite + HMR at `:3000`; `/api` proxied to the gateway. |
+| **Prod** | `make up` → static build served by nginx (SPA fallback); Traefik routes `/` here and `/api/*` to the services, all at `:8000`. |
 
 Because everything is called as relative `/api/...`, no absolute API base URL is baked into the bundle.
 
@@ -59,6 +59,11 @@ Copy `.env.example` → `.env` and adjust:
 ## Run
 
 ```bash
+# Integrated stack (from repo root)
+make up            # prod: nginx behind Traefik at http://localhost:8000
+make up-dev        # dev: Vite + HMR at http://localhost:3000
+
+# Frontend only, on the host
 cd web-service
 cp .env.example .env # if exists .env, skip
 npm install
@@ -66,11 +71,3 @@ npm run dev          # http://localhost:3000 (needs the stack up: `make up`)
 npm run build        # type-check + production build to dist/
 npm run lint         # oxlint
 ```
-
-## Backlog
-
-- [x] **a** scaffold + auth foundation (api client, session, context).
-- [x] **b** teams: list + create, members with role badges (RBAC-gated).
-- [x] **c** boards: CRUD (RBAC-gated).
-- [x] **d** tasks: kanban CRUD + assign + status.
-- [ ] **e** polish + Docker/nginx/Traefik integrated serving.

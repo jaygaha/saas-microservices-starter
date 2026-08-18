@@ -1,13 +1,36 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>web-service</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+	<meta charset="UTF-8" />
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+	<title>%VITE_APP_TITLE%</title>
+	<meta name="description"
+		content="A minimal B2B task manager — organize teams, boards, and tasks with role-based access." />
+	<meta name="theme-color" content="#4f46e5" />
+	<meta name="robots" content="index, follow" />
+
+	<!-- Open Graph -->
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="%VITE_APP_TITLE%" />
+	<meta property="og:title" content="%VITE_APP_TITLE%" />
+	<meta property="og:description" content="Organize teams, boards, and tasks with role-based access." />
+	<meta property="og:image" content="/logo.svg" />
+
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:title" content="%VITE_APP_TITLE%" />
+	<meta name="twitter:description" content="Organize teams, boards, and tasks with role-based access." />
+	<meta name="twitter:image" content="/logo.svg" />
+
+	<link rel="manifest" href="/manifest.webmanifest" />
+</head>
+
+<body>
+	<div id="root"></div>
+	<script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

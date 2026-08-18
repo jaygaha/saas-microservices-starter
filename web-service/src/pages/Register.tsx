@@ -4,8 +4,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { ApiError } from '../lib/api'
 import { Button, Card, Input } from '../components/ui'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 
 export function Register() {
+    useDocumentTitle('Create account')
+
     const { register } = useAuth()
     const navigate = useNavigate()
     const [fullName, setFullName] = useState('')

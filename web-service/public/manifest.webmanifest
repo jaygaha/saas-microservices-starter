@@ -1,0 +1,16 @@
+{
+    "name": "Task Manager SaaS",
+    "short_name": "Tasks",
+    "description": "Organize teams, boards, and tasks with role-based access.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f9fafb",
+    "theme_color": "#4f46e5",
+    "icons": [
+        {
+            "src": "/logo.svg",
+            "type": "image/svg+xml",
+            "sizes": "any"
+        }
+    ]
+}

@@ -16,7 +16,10 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="min-h-full">
             <header className="border-b border-line bg-surface">
                 <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
-                    <Link to="/teams" className="text-sm font-semibold text-ink">Task Manager</Link>
+                    <Link to="/teams" className="flex items-center gap-2 text-sm font-semibold text-ink">
+                        <img src="/logo.svg" alt="" className="h-6 w-6" />
+                        <span>Task Manager</span>
+                    </Link>
                     <div className="flex items-center gap-3 text-sm text-muted">
                         <span>{user?.email}</span>
                         <Button variant="ghost" onClick={handleLogout}>Log out</Button>

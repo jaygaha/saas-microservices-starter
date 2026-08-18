@@ -4,10 +4,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import { ApiError } from '../lib/api'
 import { Button, Card, Input } from '../components/ui'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 
 export function Login() {
     const { login } = useAuth()
     const navigate = useNavigate()
+    useDocumentTitle('Sign in')
+
     // defining state variables
     // [value, state_setter] = useState<type>(initial_value)
     const [email, setEmail] = useState('')
