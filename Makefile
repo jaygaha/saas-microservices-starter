@@ -7,7 +7,7 @@ MIGRATE_IMAGE = migrate/migrate:v4.19.1
 SQLC_IMAGE = sqlc/sqlc:1.29.0
 BASE ?= http://localhost:8020
 
-.PHONY: up down build rebuild logs ps restart clean help migrate migrate-down migrate-version migrate-force migrate-create sqlc smoke
+.PHONY: up down build rebuild logs ps restart clean help migrate seed migrate-down migrate-version migrate-force migrate-create sqlc
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -24,6 +24,9 @@ build: ## Build the service images without starting anything
 
 migrate: ## Apply all up migrations
 	$(MIGRATE) up
+
+seed: ## Apply all seed data
+	$(COMPOSE) exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1' < infra/database/seed.sql
 	
 migrate-down: ## Roll back the most recent migration
 	$(MIGRATE) down 1
@@ -49,12 +52,6 @@ logs: ## Tail logs from all services (Ctrl-C to stop)
 
 ps: ## Show container status
 	$(COMPOSE) $(PROFILE) ps
-
-smoke: ## Health-check the running stack (gateway + services)
-	@echo "smoke: $(BASE)"
-	@curl -fsS $(BASE)/api/auth/health/ready >/dev/null && echo "  ✓ auth-service ready"   || { echo "  ✗ auth-service";  exit 1; }
-	@curl -fsS $(BASE)/api/tasks/health >/dev/null && echo "  ✓ task-service healthy" || { echo "  ✗ task-service";  exit 1; }
-	@echo "smoke: OK"
 
 up-dev: ## Start the stack with the frontend in dev mode (Vite + HMR) at :3000
 	$(DEV) up -d --build
