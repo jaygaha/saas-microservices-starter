@@ -71,3 +71,6 @@ npm run dev          # http://localhost:3000 (needs the stack up: `make up`)
 npm run build        # type-check + production build to dist/
 npm run lint         # oxlint
 ```
+## Screenshots
+
+![screen](./public/ss01.png)
